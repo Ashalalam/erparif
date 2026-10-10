@@ -408,6 +408,21 @@ const LandscapeInvoice = ({
       {/* Header */}
       <div className="invoice-header">
         <div className="header-top">
+          {/* Logo section - Left */}
+          {companyDetails.logo_url && (
+            <div style={{width: '80px', marginRight: '12px', display: 'flex', alignItems: 'center'}}>
+              <img 
+                src={companyDetails.logo_url} 
+                alt="Logo" 
+                style={{
+                  maxWidth: '80px', 
+                  maxHeight: '80px', 
+                  objectFit: 'contain'
+                }} 
+              />
+            </div>
+          )}
+          
           <div className="company-section">
             <div className="company-name">{companyDetails.pharmacy_name || 'LIFESPROUTS CARE'}</div>
             <div className="company-info">

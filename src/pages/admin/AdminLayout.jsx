@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { 
   LayoutDashboard, 
@@ -18,13 +18,37 @@ import {
   Search
 } from 'lucide-react'
 import useAuthStore from '../../store/authStore'
+import { supabase } from '../../lib/supabase'
 import toast from 'react-hot-toast'
 
 const AdminLayout = ({ children }) => {
   const [sidebarOpen, setSidebarOpen] = useState(false)
+  const [logo, setLogo] = useState(null)
+  const [pharmacyName, setPharmacyName] = useState('BillSprout ERP')
   const location = useLocation()
   const navigate = useNavigate()
   const { profile, signOut } = useAuthStore()
+
+  useEffect(() => {
+    fetchSettings()
+  }, [])
+
+  const fetchSettings = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('settings')
+        .select('logo_url, pharmacy_name')
+        .limit(1)
+        .single()
+
+      if (!error && data) {
+        if (data.logo_url) setLogo(data.logo_url)
+        if (data.pharmacy_name) setPharmacyName(data.pharmacy_name)
+      }
+    } catch (error) {
+      console.error('Error fetching settings:', error)
+    }
+  }
 
   const navigation = [
     { name: 'Dashboard', href: '/admin', icon: LayoutDashboard },
@@ -62,10 +86,14 @@ const AdminLayout = ({ children }) => {
       <div className={`fixed inset-y-0 left-0 z-50 w-64 bg-white shadow-xl transform ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'} transition-transform duration-300 ease-in-out lg:translate-x-0 lg:static lg:inset-0`}>
         <div className="flex items-center justify-between h-16 px-6 bg-primary-600">
           <div className="flex items-center">
-            <div className="h-8 w-8 bg-white rounded-lg flex items-center justify-center">
-              <span className="text-lg font-bold text-primary-600">Rx</span>
+            <div className="h-8 w-8 bg-white rounded-lg flex items-center justify-center overflow-hidden">
+              {logo ? (
+                <img src={logo} alt="Logo" className="h-full w-full object-contain" />
+              ) : (
+                <span className="text-lg font-bold text-primary-600">Rx</span>
+              )}
             </div>
-            <span className="ml-3 text-lg font-semibold text-white">BillSprout Smart ERP</span>
+            <span className="ml-3 text-lg font-semibold text-white truncate">{pharmacyName}</span>
           </div>
           <button
             onClick={() => setSidebarOpen(false)}

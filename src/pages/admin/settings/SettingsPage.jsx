@@ -121,23 +121,38 @@ const SettingsPage = () => {
     if (!file) return
 
     try {
-      // Upload to Supabase Storage
-      const fileExt = file.name.split('.').pop()
-      const fileName = `logo-${Date.now()}.${fileExt}`
+      // Convert image to base64 data URL (no storage bucket needed)
+      const reader = new FileReader()
       
-      const { error: uploadError, data } = await supabase.storage
-        .from('pharmacy-assets')
-        .upload(fileName, file)
-
-      if (uploadError) throw uploadError
-
-      // Get public URL
-      const { data: { publicUrl } } = supabase.storage
-        .from('pharmacy-assets')
-        .getPublicUrl(fileName)
-
-      setFormData(prev => ({ ...prev, logo_url: publicUrl }))
-      toast.success('Logo uploaded successfully')
+      reader.onloadend = async () => {
+        try {
+          const base64String = reader.result
+          
+          // Update logo_url with base64 data
+          setFormData(prev => ({ ...prev, logo_url: base64String }))
+          
+          // Save to database immediately
+          if (settingsId) {
+            const { error } = await supabase
+              .from('settings')
+              .update({ logo_url: base64String })
+              .eq('id', settingsId)
+            
+            if (error) throw error
+          }
+          
+          toast.success('Logo uploaded successfully')
+        } catch (error) {
+          console.error('Error saving logo:', error)
+          toast.error('Failed to save logo')
+        }
+      }
+      
+      reader.onerror = () => {
+        toast.error('Failed to read image file')
+      }
+      
+      reader.readAsDataURL(file)
     } catch (error) {
       console.error('Error uploading logo:', error)
       toast.error('Failed to upload logo')

@@ -1,9 +1,10 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { Eye, EyeOff, Mail, Lock, AlertCircle, Zap, Package, FileText, RefreshCw, Database, Phone } from 'lucide-react'
 import useAuthStore from '../../store/authStore'
+import { supabase } from '../../lib/supabase'
 import toast from 'react-hot-toast'
 
 const loginSchema = z.object({
@@ -14,7 +15,30 @@ const loginSchema = z.object({
 const LoginPage = () => {
   const [showPassword, setShowPassword] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
+  const [logo, setLogo] = useState(null)
+  const [pharmacyName, setPharmacyName] = useState('BillSprout')
   const { signIn } = useAuthStore()
+
+  useEffect(() => {
+    fetchSettings()
+  }, [])
+
+  const fetchSettings = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('settings')
+        .select('logo_url, pharmacy_name')
+        .limit(1)
+        .single()
+
+      if (!error && data) {
+        if (data.logo_url) setLogo(data.logo_url)
+        if (data.pharmacy_name) setPharmacyName(data.pharmacy_name)
+      }
+    } catch (error) {
+      // Silently handle - use defaults
+    }
+  }
 
   const {
     register,
@@ -47,13 +71,17 @@ const LoginPage = () => {
         <div>
           {/* Logo and Brand */}
           <div className="flex items-center space-x-3 mb-12">
-            <div className="h-14 w-14 bg-white rounded-lg flex items-center justify-center">
-              <span className="text-2xl font-bold text-blue-900">Rx</span>
+            <div className="h-14 w-14 bg-white rounded-lg flex items-center justify-center overflow-hidden">
+              {logo ? (
+                <img src={logo} alt="Logo" className="h-full w-full object-contain p-1" />
+              ) : (
+                <span className="text-2xl font-bold text-blue-900">Rx</span>
+              )}
             </div>
             <div>
-              <h1 className="text-2xl font-bold">BillSprout</h1>
+              <h1 className="text-2xl font-bold">{pharmacyName}</h1>
               <p className="text-sm text-blue-200">Smart ERP & Fast POS Billing System</p>
-              <p className="text-xs text-blue-300">by LIFESPROUT Care</p>
+              <p className="text-xs text-blue-300">Powered by BillSprout</p>
             </div>
           </div>
 

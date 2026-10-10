@@ -17,6 +17,8 @@ const POSPage = () => {
   const [doctorName, setDoctorName] = useState('')
   const [mciNo, setMciNo] = useState('')
   const [showCart, setShowCart] = useState(false) // For mobile toggle
+  const [logo, setLogo] = useState(null)
+  const [pharmacyName, setPharmacyName] = useState('BillSprout')
 
   const {
     items,
@@ -37,8 +39,26 @@ const POSPage = () => {
 
   useEffect(() => {
     fetchCustomers()
+    fetchSettings()
     loadAllMedicines() // Load all medicines on mount
   }, [])
+
+  const fetchSettings = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('settings')
+        .select('logo_url, pharmacy_name')
+        .limit(1)
+        .single()
+
+      if (!error && data) {
+        if (data.logo_url) setLogo(data.logo_url)
+        if (data.pharmacy_name) setPharmacyName(data.pharmacy_name)
+      }
+    } catch (error) {
+      // Silently handle - use defaults
+    }
+  }
 
   useEffect(() => {
     if (searchTerm.length >= 2) {
@@ -727,11 +747,15 @@ const POSPage = () => {
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-2 md:space-x-4">
             <div className="flex items-center space-x-2">
-              <div className="w-8 h-8 md:w-10 md:h-10 bg-blue-900 rounded-lg flex items-center justify-center">
-                <span className="text-white font-bold text-sm md:text-lg">Rx</span>
+              <div className="w-8 h-8 md:w-10 md:h-10 bg-blue-900 rounded-lg flex items-center justify-center overflow-hidden">
+                {logo ? (
+                  <img src={logo} alt="Logo" className="h-full w-full object-contain p-0.5" />
+                ) : (
+                  <span className="text-white font-bold text-sm md:text-lg">Rx</span>
+                )}
               </div>
               <div className="hidden sm:block">
-                <h1 className="text-sm md:text-lg font-bold text-gray-900">BillSprout – Store Operations</h1>
+                <h1 className="text-sm md:text-lg font-bold text-gray-900">{pharmacyName} – Store Operations</h1>
                 <p className="text-xs text-gray-500">Lifesprout Care | Pharma Mode</p>
               </div>
             </div>

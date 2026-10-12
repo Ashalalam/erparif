@@ -36,11 +36,14 @@ const LedgerPage = () => {
         .from('customer_ledger')
         .select('customer_id, transaction_type, debit_amount, credit_amount')
 
-      if (ledgerError) throw ledgerError
+      if (ledgerError) {
+        console.error('Ledger error:', ledgerError)
+        // Continue even if ledger fails - customers might not have ledger entries yet
+      }
 
       // Calculate totals for each customer
       const customersWithTotals = customersData.map(customer => {
-        const customerLedger = ledgerData.filter(l => l.customer_id === customer.id)
+        const customerLedger = (ledgerData || []).filter(l => l.customer_id === customer.id)
         const total_sales = customerLedger
           .filter(l => l.transaction_type === 'SALE')
           .reduce((sum, l) => sum + (l.debit_amount || 0), 0)
@@ -49,9 +52,10 @@ const LedgerPage = () => {
           .reduce((sum, l) => sum + (l.credit_amount || 0), 0)
         
         const outstanding_amount = customer.current_balance || 0
+        const credit_limit = customer.credit_limit || 0
         const credit_status = 
-          outstanding_amount > customer.credit_limit ? 'EXCEEDED' :
-          outstanding_amount > customer.credit_limit * 0.8 ? 'WARNING' :
+          outstanding_amount > credit_limit ? 'EXCEEDED' :
+          outstanding_amount > credit_limit * 0.8 ? 'WARNING' :
           'NORMAL'
 
         return {
@@ -59,6 +63,8 @@ const LedgerPage = () => {
           total_sales,
           total_payments,
           outstanding_amount,
+          credit_limit,
+          credit_days: customer.credit_days || 0,
           credit_status
         }
       })

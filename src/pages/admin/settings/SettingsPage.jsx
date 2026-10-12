@@ -25,7 +25,11 @@ const SettingsPage = () => {
     logo_url: '',
     low_stock_threshold: 10,
     expiry_alert_days: 30,
-    block_expired_sales: true
+    block_expired_sales: true,
+    bank_name: '',
+    bank_branch: '',
+    bank_account: '',
+    bank_ifsc: ''
   })
 
   useEffect(() => {
@@ -436,6 +440,70 @@ const SettingsPage = () => {
                 <label htmlFor="auto_print" className="text-sm text-gray-700">
                   Auto-print invoices after sale
                 </label>
+              </div>
+            </div>
+          </div>
+
+          {/* Bank Details */}
+          <div className="card">
+            <h3 className="text-lg font-semibold text-gray-900 mb-4">Bank Details</h3>
+            <div className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Bank Name
+                  </label>
+                  <input
+                    type="text"
+                    name="bank_name"
+                    value={formData.bank_name}
+                    onChange={handleChange}
+                    className="input-field"
+                    placeholder="e.g., HDFC Bank"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Branch Name
+                  </label>
+                  <input
+                    type="text"
+                    name="bank_branch"
+                    value={formData.bank_branch}
+                    onChange={handleChange}
+                    className="input-field"
+                    placeholder="e.g., Main Branch"
+                  />
+                </div>
+              </div>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Account Number
+                  </label>
+                  <input
+                    type="text"
+                    name="bank_account"
+                    value={formData.bank_account}
+                    onChange={handleChange}
+                    className="input-field"
+                    placeholder="e.g., 50200012345678"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    IFSC Code
+                  </label>
+                  <input
+                    type="text"
+                    name="bank_ifsc"
+                    value={formData.bank_ifsc}
+                    onChange={handleChange}
+                    className="input-field"
+                    placeholder="e.g., HDFC0000372"
+                  />
+                </div>
               </div>
             </div>
           </div>

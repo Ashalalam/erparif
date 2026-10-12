@@ -22,6 +22,9 @@ import CustomersPage from './pages/admin/customers/CustomersPage'
 import WholesalersPage from './pages/admin/wholesalers/WholesalersPage'
 import UsersPage from './pages/admin/users/UsersPage'
 import SettingsPage from './pages/admin/settings/SettingsPage'
+import LedgerPage from './pages/admin/ledger/LedgerPage'
+import PrescriptionsPage from './pages/admin/prescriptions/PrescriptionsPage'
+import NarcoticReportPage from './pages/admin/narcotic-report/NarcoticReportPage'
 
 // Other Role Pages
 import PharmacistDashboard from './pages/pharmacist/PharmacistDashboard'
@@ -82,6 +85,9 @@ function App() {
                     <Route path="sales" element={<SalesPage />} />
                     <Route path="purchases" element={<PurchasesPage />} />
                     <Route path="customers" element={<CustomersPage />} />
+                    <Route path="ledger" element={<LedgerPage />} />
+                    <Route path="prescriptions" element={<PrescriptionsPage />} />
+                    <Route path="narcotic-report" element={<NarcoticReportPage />} />
                     <Route path="wholesalers" element={<WholesalersPage />} />
                     <Route path="users" element={<UsersPage />} />
                     <Route path="settings" element={<SettingsPage />} />

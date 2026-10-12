@@ -46,18 +46,14 @@ const LandscapeInvoice = ({
   customer, 
   companyDetails 
 }) => {
-  // Calculate totals
+  // Calculate totals and GST breakdown
   const calculateTotals = () => {
     let totalQty = 0
     let totalFree = 0
     let subtotal = 0
-    let totalDiscount = 0
     let totalDiscountAmt = 0
-    let cgst = 0
-    let sgst = 0
-    let igst = 0
     
-    const taxSummary = {}
+    const gstBreakdown = {}
 
     items.forEach(item => {
       totalQty += item.quantity
@@ -68,30 +64,39 @@ const LandscapeInvoice = ({
       const taxableAmount = itemTotal - discountAmt
       
       subtotal += itemTotal
-      totalDiscount += (item.discount || 0)
       totalDiscountAmt += discountAmt
       
       const gstRate = item.medicine.gst_percentage || 0
       const gstAmount = (taxableAmount * gstRate) / 100
       
-      // For intra-state: split into CGST and SGST
-      const cgstAmount = gstAmount / 2
-      const sgstAmount = gstAmount / 2
-      
-      cgst += cgstAmount
-      sgst += sgstAmount
-      
-      // Group by GST rate for summary
-      if (!taxSummary[gstRate]) {
-        taxSummary[gstRate] = { taxable: 0, cgst: 0, sgst: 0 }
+      // GST breakdown by rate
+      if (!gstBreakdown[gstRate]) {
+        gstBreakdown[gstRate] = { 
+          taxable: 0, 
+          cgst: 0, 
+          sgst: 0, 
+          igst: 0,
+          totalGst: 0 
+        }
       }
-      taxSummary[gstRate].taxable += taxableAmount
-      taxSummary[gstRate].cgst += cgstAmount
-      taxSummary[gstRate].sgst += sgstAmount
+      gstBreakdown[gstRate].taxable += taxableAmount
+      gstBreakdown[gstRate].cgst += gstAmount / 2
+      gstBreakdown[gstRate].sgst += gstAmount / 2
+      gstBreakdown[gstRate].totalGst += gstAmount
     })
 
     const taxableValue = subtotal - totalDiscountAmt
-    const totalTax = cgst + sgst + igst
+    let totalCgst = 0
+    let totalSgst = 0
+    let totalIgst = 0
+
+    Object.values(gstBreakdown).forEach(tax => {
+      totalCgst += tax.cgst
+      totalSgst += tax.sgst
+      totalIgst += tax.igst
+    })
+
+    const totalTax = totalCgst + totalSgst + totalIgst
     const grandTotal = taxableValue + totalTax
     const roundOff = Math.round(grandTotal) - grandTotal
     const netPayable = Math.round(grandTotal)
@@ -100,532 +105,616 @@ const LandscapeInvoice = ({
       totalQty,
       totalFree,
       subtotal,
-      totalDiscount,
       totalDiscountAmt,
       taxableValue,
-      cgst,
-      sgst,
-      igst,
+      totalCgst,
+      totalSgst,
+      totalIgst,
       totalTax,
       grandTotal,
       roundOff,
       netPayable,
-      taxSummary
+      gstBreakdown
     }
   }
 
   const totals = calculateTotals()
-  const isWholesale = sale.sale_type === 'wholesale'
   const invoiceDate = new Date(sale.created_at)
 
   return (
-    <div className="landscape-invoice">
+    <>
       <style>{`
         @page {
-          size: A4 landscape;
-          margin: 8mm;
+          size: A4 portrait;
+          margin: 5mm;
         }
 
-        .landscape-invoice {
-          font-family: 'Arial', sans-serif;
-          background: #f5f5dc;
-          color: black;
-          width: 277mm;
-          min-height: 190mm;
-          padding: 10px;
-          font-size: 10pt;
-          line-height: 1.2;
+        body {
+          margin: 0;
+          padding: 0;
+        }
+
+        .invoice-wrapper {
+          font-family: Arial, sans-serif;
+          background: white;
+          width: 210mm;
+          min-height: 297mm;
+          margin: 0 auto;
           position: relative;
+          page-break-after: always;
         }
 
-        .landscape-invoice * {
-          box-sizing: border-box;
-        }
-
-        /* Header Section */
-        .invoice-header {
-          border: 1px solid #000;
-          background: #f5f5dc;
-          padding: 6px 10px;
-          margin-bottom: 2px;
-        }
-
-        .header-top {
+        /* Page Indicator */
+        .page-indicator {
+          position: absolute;
+          top: 3mm;
+          left: 3mm;
           display: flex;
-          justify-content: space-between;
-          align-items: flex-start;
-          padding-bottom: 4px;
-          border-bottom: 1px solid #000;
+          align-items: center;
+          font-size: 10pt;
+          color: #333;
         }
 
-        .company-section {
-          flex: 1;
+        .page-icon {
+          width: 18px;
+          height: 18px;
+          border: 1px solid #666;
+          margin-right: 6px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          font-size: 8pt;
+        }
+
+        /* Main Content */
+        .invoice-content {
+          border: 2px solid #000;
+          margin: 8mm 5mm 5mm 5mm;
+          padding: 0;
+          min-height: 277mm;
+        }
+
+        /* Header */
+        .invoice-header {
+          text-align: center;
+          border-bottom: 2px solid #000;
+          padding: 8px 10px 6px 10px;
         }
 
         .company-name {
-          font-size: 14pt;
+          font-size: 20pt;
           font-weight: bold;
+          color: #1e40af;
+          letter-spacing: 0.5px;
           margin-bottom: 2px;
+        }
+
+        .company-type {
+          font-size: 9pt;
+          color: #1e40af;
+          text-decoration: underline;
+          margin-bottom: 3px;
+        }
+
+        .company-address {
+          font-size: 7.5pt;
+          line-height: 1.4;
           color: #000;
         }
 
-        .company-info {
-          font-size: 8pt;
-          line-height: 1.3;
+        .invoice-title {
+          font-size: 13pt;
+          font-weight: bold;
+          margin-top: 6px;
+          padding: 3px 0;
+          border-top: 1px solid #000;
+          border-bottom: 1px solid #000;
         }
 
-        .invoice-meta-top {
-          text-align: right;
-          font-size: 9pt;
-        }
-
-        .invoice-meta-top div {
-          margin-bottom: 2px;
-        }
-
-        .header-bottom {
-          padding-top: 4px;
+        /* Customer Section */
+        .customer-section {
           display: flex;
           justify-content: space-between;
-          font-size: 9pt;
+          padding: 6px 10px;
+          border-bottom: 2px solid #000;
+          font-size: 7.5pt;
+          line-height: 1.5;
         }
 
-        .customer-section {
+        .customer-left {
           flex: 1;
         }
 
-        .info-row {
-          margin-bottom: 2px;
-          font-size: 9pt;
+        .customer-right {
+          text-align: right;
+          min-width: 120px;
         }
 
-        .info-label {
+        .customer-name {
           font-weight: bold;
-          display: inline-block;
-          min-width: 90px;
+          margin-bottom: 2px;
         }
 
-        /* Medicine Table */
-        .medicine-table-wrapper {
-          border: 1px solid #000;
-          background: #f5f5dc;
-          margin-top: 2px;
-        }
-
-        .medicine-table {
+        /* Product Table */
+        .product-table {
           width: 100%;
           border-collapse: collapse;
-          table-layout: fixed;
-          background: #f5f5dc;
+          font-size: 7pt;
         }
 
-        .medicine-table thead {
-          background: #e8e8d0;
+        .product-table thead {
+          background: #b9f0f3;
         }
 
-        .medicine-table th {
+        .product-table th {
           border: 1px solid #000;
           padding: 4px 2px;
           text-align: center;
           font-weight: bold;
-          font-size: 8pt;
           line-height: 1.1;
+          vertical-align: middle;
         }
 
-        .medicine-table td {
+        .product-table td {
           border: 1px solid #000;
           padding: 4px 3px;
-          font-size: 9pt;
           vertical-align: middle;
-          background: #f5f5dc;
+          min-height: 20px;
         }
 
-        .medicine-table .text-left { text-align: left; }
-        .medicine-table .text-center { text-align: center; }
-        .medicine-table .text-right { text-align: right; }
+        .product-table tbody tr {
+          min-height: 22px;
+        }
 
-        /* Column Widths - Matching MARG ERP */
-        .col-sr { width: 35px; }
-        .col-item { width: auto; min-width: 180px; }
-        .col-pack { width: 50px; }
-        .col-hsn { width: 60px; }
-        .col-batch { width: 80px; }
-        .col-exp { width: 50px; }
-        .col-qty { width: 45px; }
-        .col-rate { width: 60px; }
-        .col-dis-pct { width: 50px; }
-        .col-dis-amt { width: 65px; }
-        .col-gst { width: 55px; }
-        .col-amount { width: 80px; }
+        .text-left { text-align: left; }
+        .text-center { text-align: center; }
+        .text-right { text-align: right; }
 
-        .item-name {
+        /* Column Widths - Exact match to reference */
+        .col-sr { width: 20px; }
+        .col-product { width: auto; min-width: 100px; }
+        .col-mfr { width: 55px; }
+        .col-hsn { width: 38px; }
+        .col-pack { width: 32px; }
+        .col-qty { width: 28px; }
+        .col-free { width: 28px; }
+        .col-batch { width: 50px; }
+        .col-exp { width: 35px; }
+        .col-mrp { width: 42px; }
+        .col-rate { width: 42px; }
+        .col-disc { width: 28px; }
+        .col-gst-pct { width: 32px; }
+        .col-gst-amt { width: 42px; }
+        .col-amount { width: 52px; }
+
+        .product-name {
           font-weight: 600;
+          font-size: 7.5pt;
           word-wrap: break-word;
-          font-size: 9pt;
         }
 
         /* Footer Section */
-        .invoice-footer {
+        .footer-section {
           display: flex;
-          margin-top: 4px;
-          gap: 4px;
+          padding: 6px 10px;
+          gap: 8px;
+          border-top: 2px solid #000;
         }
 
-        .left-footer {
+        .gst-summary {
           flex: 1;
-          display: flex;
-          flex-direction: column;
-          gap: 4px;
         }
 
-        .qr-section {
-          border: 1px solid #000;
-          background: #f5f5dc;
-          padding: 8px;
-          text-align: center;
-          height: 120px;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          flex-direction: column;
-        }
-
-        .amount-words-section {
-          border: 1px solid #000;
-          background: #f5f5dc;
-          padding: 6px 8px;
-          font-size: 9pt;
-        }
-
-        .terms-section {
-          border: 1px solid #000;
-          background: #f5f5dc;
-          padding: 6px 8px;
+        .gst-summary-title {
+          font-weight: bold;
           font-size: 8pt;
+          margin-bottom: 4px;
         }
 
-        .tax-totals-section {
-          width: 320px;
-          border: 1px solid #000;
-          background: #f5f5dc;
-          padding: 6px 8px;
-        }
-
-        .tax-summary-table {
+        .gst-summary-table {
           width: 100%;
           border-collapse: collapse;
-          margin-bottom: 6px;
+          font-size: 7pt;
         }
 
-        .tax-summary-table td {
-          padding: 2px 4px;
-          font-size: 8pt;
-          border: 1px solid #888;
+        .gst-summary-table th,
+        .gst-summary-table td {
+          border: 1px solid #000;
+          padding: 3px 4px;
+          text-align: center;
         }
 
-        .tax-summary-table .label-cell {
+        .gst-summary-table th {
+          background: #e8e8e8;
           font-weight: bold;
-          text-align: right;
-          padding-right: 8px;
+        }
+
+        .totals-box {
+          width: 240px;
+          display: flex;
+          flex-direction: column;
         }
 
         .totals-table {
           width: 100%;
+          font-size: 8pt;
           border-collapse: collapse;
         }
 
         .totals-table td {
-          padding: 3px 4px;
-          font-size: 9pt;
-          border-bottom: 1px solid #ccc;
+          padding: 3px 6px;
+          border-bottom: 1px solid #ddd;
         }
 
-        .totals-table .label-col {
+        .totals-label {
           font-weight: 600;
+          text-align: left;
         }
 
-        .totals-table .value-col {
+        .totals-value {
           text-align: right;
-        }
-
-        .totals-table tr:last-child td {
-          border-bottom: none;
+          min-width: 70px;
         }
 
         .grand-total-row {
-          background: #e8e8d0;
           font-weight: bold;
-          font-size: 11pt !important;
-          border: 1px solid #000 !important;
+          font-size: 9pt;
+          background: #f5f5f5;
+          border-top: 2px solid #000;
         }
 
-        .signature-footer {
-          display: flex;
-          justify-content: space-between;
-          margin-top: 8px;
-          padding: 0 20px;
+        .grand-total-row td {
+          padding: 5px 6px;
+          border-bottom: none;
+        }
+
+        /* Notes Section */
+        .notes-section {
+          padding: 8px 10px;
+          border-top: 1px solid #000;
+          font-size: 6.5pt;
+          line-height: 1.5;
+        }
+
+        .notes-title {
+          font-weight: bold;
+          text-decoration: underline;
+          margin-bottom: 4px;
+        }
+
+        /* Page 2 - Terms */
+        .terms-page {
+          page-break-before: always;
+          font-family: Arial, sans-serif;
+          background: white;
+          width: 210mm;
+          min-height: 297mm;
+          margin: 0 auto;
+        }
+
+        .terms-content {
+          border: 2px solid #000;
+          margin: 8mm 5mm;
+          padding: 15px;
+          min-height: 277mm;
+        }
+
+        .terms-header {
+          text-align: center;
+          font-weight: bold;
+          font-size: 12pt;
+          margin-bottom: 15px;
+          padding-bottom: 8px;
+          border-bottom: 2px solid #000;
+        }
+
+        .terms-text {
+          font-size: 8pt;
+          line-height: 1.6;
+        }
+
+        .terms-text p {
+          margin-bottom: 8px;
+        }
+
+        .bank-details-box {
+          margin-top: 20px;
+          padding: 12px;
+          border: 1px solid #000;
+          background: #f9f9f9;
+        }
+
+        .bank-details-title {
+          font-weight: bold;
+          font-size: 10pt;
+          margin-bottom: 8px;
+        }
+
+        .bank-details-content {
+          font-size: 8pt;
+          line-height: 1.6;
         }
 
         .signature-area {
-          text-align: center;
+          margin-top: 50px;
+          display: flex;
+          justify-content: space-between;
+          align-items: flex-end;
+        }
+
+        .checked-by {
           font-size: 9pt;
         }
 
-        .signature-line {
-          margin-top: 35px;
+        .authorized-sig {
+          text-align: center;
+        }
+
+        .sig-line {
+          margin-top: 60px;
           padding-top: 2px;
-        }
-
-        .footer-note {
-          text-align: center;
-          margin-top: 6px;
-          font-size: 8pt;
-          font-style: italic;
-        }
-
-        .branding {
-          text-align: center;
-          margin-top: 4px;
-          font-size: 7pt;
-          color: #666;
+          border-top: 1px solid #000;
+          min-width: 180px;
+          font-weight: bold;
+          font-size: 9pt;
         }
 
         @media print {
-          .landscape-invoice {
+          body {
             margin: 0;
-            padding: 8px;
+            padding: 0;
+          }
+
+          .invoice-wrapper, .terms-page {
+            margin: 0;
             width: 100%;
-            min-height: auto;
           }
 
           @page {
-            size: A4 landscape;
-            margin: 8mm;
+            size: A4 portrait;
+            margin: 5mm;
           }
         }
       `}</style>
 
-      {/* Header */}
-      <div className="invoice-header">
-        <div className="header-top">
-          {/* Logo section - Left */}
-          {companyDetails.logo_url && (
-            <div style={{width: '80px', marginRight: '12px', display: 'flex', alignItems: 'center'}}>
-              <img 
-                src={companyDetails.logo_url} 
-                alt="Logo" 
-                style={{
-                  maxWidth: '80px', 
-                  maxHeight: '80px', 
-                  objectFit: 'contain'
-                }} 
-              />
-            </div>
-          )}
-          
-          <div className="company-section">
-            <div className="company-name">{companyDetails.pharmacy_name || 'LIFESPROUTS CARE'}</div>
-            <div className="company-info">
-              <div>{companyDetails.address || '2-190/6 Peikaji Nagar Asifabad, Kommurum Bheem Asifabad'}, {companyDetails.state || 'TELANGANA'}</div>
-              <div><strong>GSTIN:</strong> {companyDetails.gstin || '36CTUPD3541E1ZO'} | <strong>D.L NO:</strong> {companyDetails.drug_license_number || '(20B&21B)TG/AS/2025-139054'}</div>
-              <div><strong>Phone:</strong> {companyDetails.phone || '9666105832'} | <strong>Email:</strong> {companyDetails.email || 'vedithapharma@gmail.com'}</div>
-              {companyDetails.fssai_number && <div><strong>FSSAI:</strong> {companyDetails.fssai_number}</div>}
-            </div>
-          </div>
-          <div className="invoice-meta-top">
-            <div><strong>Date:</strong> {invoiceDate.toLocaleDateString('en-GB')}</div>
-            <div><strong>Time:</strong> {invoiceDate.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })}</div>
-          </div>
+      {/* Page 1 - Invoice */}
+      <div className="invoice-wrapper">
+        {/* Page Indicator */}
+        <div className="page-indicator">
+          <div className="page-icon">📄</div>
+          <span>1 of 3</span>
         </div>
 
-        <div className="header-bottom">
+        <div className="invoice-content">
+          {/* Header */}
+          <div className="invoice-header">
+            <div className="company-name">{companyDetails.pharmacy_name || 'LIFESPROUT CARE LLP'}</div>
+            <div className="company-type">Pharmaceutical Distributors</div>
+            <div className="company-address">
+              {companyDetails.address || 'SHOP NO. 1, PROPERTY NO.642, GROUND FLOOR'}<br/>
+              NEAR FOREST OFFICE AT POST: PATAN, TAL: JIVAJI NAGAR<br/>
+              GSTIN: {companyDetails.gstin || '36CTUPD3541E1ZO'} | 
+              D.L. NO: {companyDetails.drug_license_number || '(20B&21B)TG/AS/2025-139054'}<br/>
+              {companyDetails.fssai_number && `FSSAI: ${companyDetails.fssai_number} | `}
+              Phone: {companyDetails.phone || '9666105832'} | 
+              Email: {companyDetails.email || 'care@lifesproutcare.com'}
+            </div>
+            <div className="invoice-title">GST INVOICE</div>
+          </div>
+
+          {/* Customer Section */}
           <div className="customer-section">
-            <div className="info-row">
-              <span className="info-label">{isWholesale ? 'Patient Mobile' : 'Customer'}:</span>
-              <span>{customer?.phone || customer?.name || customer?.business_name || 'Walk-in'}</span>
+            <div className="customer-left">
+              <div className="customer-name">
+                M/S: {customer?.business_name || customer?.name || 'MAHALAXMI MEDICAL & GENERAL STORE'}
+              </div>
+              <div>WANI ROAD KORPANA</div>
+              <div>CHANDRAPUR</div>
+              <div>PHONE: {customer?.phone || '6860257123'}</div>
+              <div>Party: GST-CGMPD3541D1ZP</div>
             </div>
-            {isWholesale && customer?.name && (
-              <div className="info-row">
-                <span className="info-label">Doctor Name:</span>
-                <span>{customer.name}</span>
-              </div>
-            )}
-            {!isWholesale && customer?.customer_type === 'retailer' && customer?.business_name && (
-              <div className="info-row">
-                <span className="info-label">Business:</span>
-                <span>{customer.business_name}</span>
-              </div>
-            )}
+            <div className="customer-right">
+              <div><strong>INVOICE NO:</strong> {sale.invoice_number}</div>
+              <div><strong>Date:</strong> {invoiceDate.toLocaleDateString('en-GB')}</div>
+            </div>
           </div>
-        </div>
-      </div>
 
-      {/* Medicine Table */}
-      <div className="medicine-table-wrapper">
-        <table className="medicine-table">
-          <thead>
-            <tr>
-              <th className="col-sr">Sr<br/>No</th>
-              <th className="col-item text-left">Item Description</th>
-              <th className="col-pack">Pack</th>
-              <th className="col-hsn">HSN<br/>Code</th>
-              <th className="col-batch">Batch</th>
-              <th className="col-exp">Expiry</th>
-              <th className="col-qty">Qty</th>
-              <th className="col-rate">Rate</th>
-              <th className="col-dis-pct">Dis%</th>
-              <th className="col-dis-amt">Dis<br/>Amt</th>
-              <th className="col-gst">GST%</th>
-              <th className="col-amount text-right">Total<br/>Amount</th>
-            </tr>
-          </thead>
-          <tbody>
-            {items.map((item, index) => {
-              const itemTotal = item.quantity * item.price
-              const discountAmt = (itemTotal * (item.discount || 0)) / 100
-              const taxableAmount = itemTotal - discountAmt
-              const gstRate = item.medicine.gst_percentage || 0
-              const gstAmount = (taxableAmount * gstRate) / 100
-              const totalWithGst = taxableAmount + gstAmount
+          {/* Product Table */}
+          <table className="product-table">
+            <thead>
+              <tr>
+                <th className="col-sr">Sr</th>
+                <th className="col-product text-left">Product Name</th>
+                <th className="col-mfr">Mfr</th>
+                <th className="col-hsn">HSN</th>
+                <th className="col-pack">Pack</th>
+                <th className="col-qty">Qty</th>
+                <th className="col-free">Off/<br/>Free</th>
+                <th className="col-batch">Batch</th>
+                <th className="col-exp">Exp</th>
+                <th className="col-mrp">M.R.P</th>
+                <th className="col-rate">Rate</th>
+                <th className="col-disc">Free</th>
+                <th className="col-gst-pct">GST<br/>%</th>
+                <th className="col-gst-amt">GST<br/>Amt</th>
+                <th className="col-amount text-right">Amount</th>
+              </tr>
+            </thead>
+            <tbody>
+              {items.map((item, index) => {
+                const itemTotal = item.quantity * item.price
+                const discountAmt = (itemTotal * (item.discount || 0)) / 100
+                const taxableAmount = itemTotal - discountAmt
+                const gstRate = item.medicine.gst_percentage || 0
+                const gstAmount = (taxableAmount * gstRate) / 100
+                const totalWithGst = taxableAmount + gstAmount
+                
+                return (
+                  <tr key={index}>
+                    <td className="text-center">{index + 1}</td>
+                    <td className="text-left">
+                      <div className="product-name">{item.medicine.name}</div>
+                    </td>
+                    <td className="text-center" style={{fontSize: '6pt'}}>
+                      {item.medicine.manufacturer?.substring(0, 8) || '-'}
+                    </td>
+                    <td className="text-center">{item.medicine.hsn_code || '3004'}</td>
+                    <td className="text-center">{item.medicine.pack_size || '10'}</td>
+                    <td className="text-center"><strong>{item.quantity}</strong></td>
+                    <td className="text-center">{item.freeQuantity || 0}</td>
+                    <td className="text-center">{item.batch.batch_number}</td>
+                    <td className="text-center">
+                      {new Date(item.batch.expiry_date).toLocaleDateString('en-GB', { 
+                        month: '2-digit', 
+                        year: '2-digit' 
+                      })}
+                    </td>
+                    <td className="text-right">{item.batch.mrp?.toFixed(2) || '0.00'}</td>
+                    <td className="text-right">{item.price.toFixed(2)}</td>
+                    <td className="text-center">{item.discount || 0}</td>
+                    <td className="text-center">{gstRate.toFixed(0)}</td>
+                    <td className="text-right">{gstAmount.toFixed(2)}</td>
+                    <td className="text-right"><strong>{totalWithGst.toFixed(2)}</strong></td>
+                  </tr>
+                )
+              })}
               
-              return (
-                <tr key={index}>
-                  <td className="text-center">{index + 1}</td>
-                  <td className="text-left">
-                    <div className="item-name">{item.medicine.name}</div>
-                    {item.medicine.manufacturer && (
-                      <div style={{fontSize: '8pt', color: '#555'}}>
-                        Mfg: {item.medicine.manufacturer}
-                      </div>
-                    )}
-                  </td>
-                  <td className="text-center">{item.medicine.pack_size || '10'}</td>
-                  <td className="text-center">{item.medicine.hsn_code || '3004'}</td>
-                  <td className="text-center">{item.batch.batch_number}</td>
-                  <td className="text-center">
-                    {new Date(item.batch.expiry_date).toLocaleDateString('en-GB', { month: '2-digit', year: '2-digit' })}
-                  </td>
-                  <td className="text-center"><strong>{item.quantity}</strong></td>
-                  <td className="text-right">{item.price.toFixed(2)}</td>
-                  <td className="text-center">{(item.discount || 0).toFixed(1)}</td>
-                  <td className="text-right">{discountAmt.toFixed(2)}</td>
-                  <td className="text-center">{gstRate.toFixed(0)}</td>
-                  <td className="text-right"><strong>{totalWithGst.toFixed(2)}</strong></td>
+              {/* Fill empty rows to maintain layout */}
+              {items.length < 10 && Array(10 - items.length).fill(0).map((_, i) => (
+                <tr key={`empty-${i}`} style={{height: '22px'}}>
+                  <td colSpan="15">&nbsp;</td>
                 </tr>
-              )
-            })}
-            
-            {/* Add empty rows if there are fewer items to maintain structure */}
-            {items.length < 3 && Array(3 - items.length).fill(0).map((_, i) => (
-              <tr key={`empty-${i}`} style={{height: '30px'}}>
-                <td colSpan="12">&nbsp;</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+              ))}
+            </tbody>
+          </table>
 
-      {/* Footer with Tax Summary and Totals */}
-      <div className="invoice-footer">
-        {/* Left side - QR, Amount in Words, Terms */}
-        <div className="left-footer">
-          {/* QR Code Section */}
-          <div className="qr-section">
-            <div style={{fontSize: '10pt', fontWeight: 'bold', marginBottom: '4px'}}>Scan & Book</div>
-            <div style={{width: '80px', height: '80px', border: '1px solid #888', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '8pt'}}>
-              QR CODE
+          {/* Footer with GST Summary and Totals */}
+          <div className="footer-section">
+            {/* GST Summary */}
+            <div className="gst-summary">
+              <div className="gst-summary-title">CLASS</div>
+              <table className="gst-summary-table">
+                <thead>
+                  <tr>
+                    <th>CLASS</th>
+                    <th>TOTAL</th>
+                    <th>SGST</th>
+                    <th>DISC</th>
+                    <th>IGST</th>
+                    <th>TOTAL GST</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {Object.entries(totals.gstBreakdown).map(([rate, values]) => (
+                    <tr key={rate}>
+                      <td>GST {rate}%</td>
+                      <td className="text-right">{values.taxable.toFixed(2)}</td>
+                      <td className="text-right">{values.sgst.toFixed(2)}</td>
+                      <td className="text-right">0.00</td>
+                      <td className="text-right">{values.igst.toFixed(2)}</td>
+                      <td className="text-right">{values.totalGst.toFixed(2)}</td>
+                    </tr>
+                  ))}
+                  <tr style={{fontWeight: 'bold'}}>
+                    <td>TOTAL</td>
+                    <td className="text-right">{totals.taxableValue.toFixed(2)}</td>
+                    <td className="text-right">{totals.totalSgst.toFixed(2)}</td>
+                    <td className="text-right">0.00</td>
+                    <td className="text-right">{totals.totalIgst.toFixed(2)}</td>
+                    <td className="text-right">{totals.totalTax.toFixed(2)}</td>
+                  </tr>
+                </tbody>
+              </table>
+              <div style={{fontSize: '7pt', marginTop: '4px'}}>
+                <strong>Rs. (AND THOUSAND):</strong> {totals.netPayable.toFixed(2)}
+              </div>
             </div>
-            <div style={{fontSize: '8pt', marginTop: '4px'}}>Improve Your Health</div>
+
+            {/* Totals Box */}
+            <div className="totals-box">
+              <table className="totals-table">
+                <tbody>
+                  <tr>
+                    <td className="totals-label">SUB TOTAL</td>
+                    <td className="totals-value">{totals.taxableValue.toFixed(2)}</td>
+                  </tr>
+                  <tr>
+                    <td className="totals-label">GST PAYBLE</td>
+                    <td className="totals-value">{totals.totalTax.toFixed(2)}</td>
+                  </tr>
+                  <tr>
+                    <td className="totals-label">CGST</td>
+                    <td className="totals-value">{totals.totalCgst.toFixed(2)}</td>
+                  </tr>
+                  <tr>
+                    <td className="totals-label">CREDIT</td>
+                    <td className="totals-value">0.00</td>
+                  </tr>
+                  <tr>
+                    <td className="totals-label">SGST</td>
+                    <td className="totals-value">{totals.totalSgst.toFixed(2)}</td>
+                  </tr>
+                  <tr className="grand-total-row">
+                    <td className="totals-label">GRAND TOTAL</td>
+                    <td className="totals-value">{totals.netPayable.toFixed(2)}</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
           </div>
 
-          {/* Amount in Words */}
-          <div className="amount-words-section">
-            <div><strong>Amount in Words:</strong> {amountToWords(totals.netPayable)}</div>
+          {/* Notes */}
+          <div className="notes-section">
+            <div className="notes-title">NOTE:</div>
+            <div>
+              1. GOODS ONCE SOLD WILL NOT BE TAKEN BACK OR EXCHANGED.<br/>
+              2. INTEREST @2 % PER MONTH WILL BE CHARGED FOR ALL OUTSTANDING BILLS.<br/>
+              3. DISPATCHED THE FILLED QUANTITY AS PER COMMERCIAL POLICY OF THE COMPANY ANNOUNCED FROM TIME TO TIME.<br/>
+              4. ALL DISPUTES ARE SUBJECT TO JURISDICTION OF {companyDetails.state || 'TELANGANA'} COURT ONLY.<br/>
+              5. Payment...
+            </div>
           </div>
-
-          {/* Terms & Conditions */}
-          <div className="terms-section">
-            <div style={{fontWeight: 'bold', marginBottom: '2px'}}>Terms & Condition</div>
-            <div><strong>**GET WELL SOON**</strong></div>
-            <div style={{marginTop: '4px', fontSize: '7pt'}}>For, {customer?.name || 'Customer'}</div>
-          </div>
-        </div>
-
-        {/* Right side - Tax Summary and Totals */}
-        <div className="tax-totals-section">
-          {/* Tax Summary Table */}
-          <table className="tax-summary-table">
-            <tbody>
-              <tr>
-                <td className="label-cell">CGST :</td>
-                <td style={{textAlign: 'right'}}>{totals.cgst.toFixed(2)}</td>
-              </tr>
-              <tr>
-                <td className="label-cell">SGST :</td>
-                <td style={{textAlign: 'right'}}>{totals.sgst.toFixed(2)}</td>
-              </tr>
-              {totals.igst > 0 && (
-                <tr>
-                  <td className="label-cell">IGST :</td>
-                  <td style={{textAlign: 'right'}}>{totals.igst.toFixed(2)}</td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-
-          {/* Totals Table */}
-          <table className="totals-table">
-            <tbody>
-              <tr>
-                <td className="label-col">Gross Total</td>
-                <td className="value-col">{totals.subtotal.toFixed(2)}</td>
-              </tr>
-              <tr>
-                <td className="label-col">Total Discount</td>
-                <td className="value-col">{totals.totalDiscountAmt.toFixed(2)}</td>
-              </tr>
-              <tr>
-                <td className="label-col">Taxable Amount</td>
-                <td className="value-col">{totals.taxableValue.toFixed(2)}</td>
-              </tr>
-              <tr>
-                <td className="label-col">Total Tax Amount</td>
-                <td className="value-col">{totals.totalTax.toFixed(2)}</td>
-              </tr>
-              <tr>
-                <td className="label-col">Round Off</td>
-                <td className="value-col">{totals.roundOff.toFixed(2)}</td>
-              </tr>
-              <tr className="grand-total-row">
-                <td className="label-col">Net Amount</td>
-                <td className="value-col">{totals.netPayable.toFixed(2)}</td>
-              </tr>
-            </tbody>
-          </table>
         </div>
       </div>
 
-      {/* Bottom section with QR and signature */}
-      <div className="signature-footer">
-        <div style={{width: '120px', textAlign: 'center'}}>
-          <div style={{width: '100px', height: '100px', border: '1px solid #888', margin: '0 auto', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '8pt'}}>
-            QR CODE
+      {/* Page 2 - Terms & Conditions */}
+      <div className="terms-page">
+        <div className="terms-content">
+          <div className="terms-header">
+            Terms & Conditions<br/>
+            For {companyDetails.pharmacy_name || 'LIFESPROUT CARE LLP'}
+          </div>
+
+          <div className="terms-text">
+            <p><strong>General Terms:</strong></p>
+            <p>• Goods once sold will not be taken back or exchanged.</p>
+            <p>• Bills not paid due date will attract 24% interest.</p>
+            <p>• Interest @2% per month will be charged for all outstanding bills.</p>
+            <p>• Sales Tax declaration will be given as prescribed.</p>
+
+            <div className="bank-details-box">
+              <div className="bank-details-title">
+                Bank Details: {companyDetails.pharmacy_name || 'LIFESPROUT CARE LLP'}
+              </div>
+              <div className="bank-details-content">
+                <div><strong>Bank Name:</strong> {companyDetails.bank_name || 'HDFC BANK'}</div>
+                <div><strong>Branch:</strong> {companyDetails.bank_branch || 'Main Branch'}</div>
+                <div><strong>A/C NO:</strong> {companyDetails.bank_account || '50200012345678'}</div>
+                <div><strong>IFSC CODE:</strong> {companyDetails.bank_ifsc || 'HDFC0000372'}</div>
+                <div><strong>NEFT CODE: {companyDetails.bank_ifsc || 'HDFC0000372'}</strong></div>
+              </div>
+            </div>
+          </div>
+
+          <div className="signature-area">
+            <div className="checked-by">Checked By: ________________</div>
+            <div className="authorized-sig">
+              <div className="sig-line">Authorised signatory</div>
+            </div>
           </div>
         </div>
-        <div className="signature-area">
-          <div className="signature-line">Authorised Sign.</div>
-        </div>
       </div>
-
-      {/* Footer Notes */}
-      <div className="footer-note">
-        Get well soon. Scan the Healthcare QR Code for complete health services, insurance, and government benefits.
-      </div>
-
-      <div className="branding">
-        Powered by BillSprout ERP
-      </div>
-    </div>
+    </>
   )
 }
 

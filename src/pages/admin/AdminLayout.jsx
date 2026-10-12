@@ -15,7 +15,10 @@ import {
   Menu,
   X,
   Bell,
-  Search
+  Search,
+  DollarSign,
+  FileText,
+  AlertTriangle
 } from 'lucide-react'
 import useAuthStore from '../../store/authStore'
 import { supabase } from '../../lib/supabase'
@@ -58,6 +61,9 @@ const AdminLayout = ({ children }) => {
     { name: 'Purchases', href: '/admin/purchases', icon: ShoppingBag },
     { name: 'Sales', href: '/admin/sales', icon: Receipt },
     { name: 'Customers', href: '/admin/customers', icon: Users },
+    { name: 'Ledger', href: '/admin/ledger', icon: DollarSign },
+    { name: 'Prescriptions', href: '/admin/prescriptions', icon: FileText },
+    { name: 'Narcotic Report', href: '/admin/narcotic-report', icon: AlertTriangle },
     { name: 'Wholesalers', href: '/admin/wholesalers', icon: Truck },
     { name: 'Users', href: '/admin/users', icon: UserCheck },
     { name: 'Settings', href: '/admin/settings', icon: Settings },

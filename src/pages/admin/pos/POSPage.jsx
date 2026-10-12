@@ -5,6 +5,7 @@ import { supabase } from '../../../lib/supabase'
 import toast from 'react-hot-toast'
 import { createRoot } from 'react-dom/client'
 import LandscapeInvoice from '../../../components/LandscapeInvoice'
+import WholesaleInvoice from '../../../components/WholesaleInvoice'
 
 const POSPage = () => {
   const [medicines, setMedicines] = useState([])
@@ -418,8 +419,13 @@ const POSPage = () => {
     
     // Render React component to print window
     const root = createRoot(container)
+    
+    // Choose invoice component based on sale type
+    const isWholesale = saleType === 'wholesale'
+    const InvoiceComponent = isWholesale ? WholesaleInvoice : LandscapeInvoice
+    
     root.render(
-      <LandscapeInvoice
+      <InvoiceComponent
         sale={sale}
         items={saleItems}
         customer={customer}

@@ -23,6 +23,7 @@ import WholesalersPage from './pages/admin/wholesalers/WholesalersPage'
 import UsersPage from './pages/admin/users/UsersPage'
 import SettingsPage from './pages/admin/settings/SettingsPage'
 import LedgerPage from './pages/admin/ledger/LedgerPage'
+import SupplierLedgerPage from './pages/admin/supplier-ledger/SupplierLedgerPage'
 import PrescriptionsPage from './pages/admin/prescriptions/PrescriptionsPage'
 import NarcoticReportPage from './pages/admin/narcotic-report/NarcoticReportPage'
 
@@ -86,6 +87,7 @@ function App() {
                     <Route path="purchases" element={<PurchasesPage />} />
                     <Route path="customers" element={<CustomersPage />} />
                     <Route path="ledger" element={<LedgerPage />} />
+                    <Route path="supplier-ledger" element={<SupplierLedgerPage />} />
                     <Route path="prescriptions" element={<PrescriptionsPage />} />
                     <Route path="narcotic-report" element={<NarcoticReportPage />} />
                     <Route path="wholesalers" element={<WholesalersPage />} />

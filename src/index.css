@@ -14,8 +14,9 @@
 }
 
 @layer components {
+  /* Legacy LIFESPROUT Theme Button Styles */
   .btn-primary {
-    @apply bg-primary-600 hover:bg-primary-700 text-white px-4 py-2 rounded-lg font-medium transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed;
+    @apply bg-lifesprout-blue hover:bg-lifesprout-blue-dark text-white px-4 py-2 rounded-lg font-semibold transition-all duration-200 shadow-sm hover:shadow-md disabled:opacity-50 disabled:cursor-not-allowed;
   }
   
   .btn-secondary {
@@ -23,22 +24,85 @@
   }
   
   .btn-success {
-    @apply bg-success-600 hover:bg-success-700 text-white px-4 py-2 rounded-lg font-medium transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed;
+    @apply bg-lifesprout-green hover:bg-green-800 text-white px-4 py-2 rounded-lg font-semibold transition-all duration-200 shadow-sm hover:shadow-md disabled:opacity-50 disabled:cursor-not-allowed;
   }
   
   .btn-danger {
-    @apply bg-danger-600 hover:bg-danger-700 text-white px-4 py-2 rounded-lg font-medium transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed;
+    @apply bg-lifesprout-red hover:bg-red-800 text-white px-4 py-2 rounded-lg font-semibold transition-all duration-200 shadow-sm hover:shadow-md disabled:opacity-50 disabled:cursor-not-allowed;
+  }
+  
+  .btn-accent {
+    @apply bg-lifesprout-orange hover:bg-lifesprout-orange-dark text-white px-4 py-2 rounded-lg font-semibold transition-all duration-200 shadow-sm hover:shadow-md disabled:opacity-50 disabled:cursor-not-allowed;
+  }
+  
+  .btn-outline-primary {
+    @apply border-2 border-lifesprout-blue text-lifesprout-blue hover:bg-lifesprout-blue hover:text-white px-4 py-2 rounded-lg font-medium transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed;
+  }
+  
+  .btn-outline-accent {
+    @apply border-2 border-lifesprout-orange text-lifesprout-orange hover:bg-lifesprout-orange hover:text-white px-4 py-2 rounded-lg font-medium transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed;
   }
   
   .input-field {
-    @apply w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent;
+    @apply w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-lifesprout-blue focus:border-transparent transition-all duration-200;
+  }
+  
+  .input-error {
+    @apply w-full px-3 py-2 border border-red-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-lifesprout-red focus:border-transparent;
   }
   
   .card {
-    @apply bg-white rounded-lg shadow-sm border border-gray-200 p-6;
+    @apply bg-white rounded-lg shadow-sm border border-gray-200 p-6 hover:shadow-md transition-shadow duration-200;
+  }
+  
+  .card-elevated {
+    @apply bg-white rounded-xl shadow-md border border-gray-100 p-6 hover:shadow-lg transition-shadow duration-200;
   }
   
   .table-row {
-    @apply border-b border-gray-200 hover:bg-gray-50 transition-colors duration-150;
+    @apply border-b border-gray-200 hover:bg-blue-50 transition-colors duration-150;
+  }
+  
+  .badge {
+    @apply inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium;
+  }
+  
+  .badge-primary {
+    @apply badge bg-blue-100 text-lifesprout-blue;
+  }
+  
+  .badge-success {
+    @apply badge bg-green-100 text-lifesprout-green;
+  }
+  
+  .badge-danger {
+    @apply badge bg-red-100 text-lifesprout-red;
+  }
+  
+  .badge-accent {
+    @apply badge bg-orange-100 text-lifesprout-orange;
+  }
+  
+  .badge-warning {
+    @apply badge bg-yellow-100 text-yellow-800;
+  }
+  
+  /* Hero Panel Gradient (Login Screen) */
+  .hero-gradient {
+    @apply bg-gradient-to-br from-lifesprout-blue via-blue-800 to-lifesprout-blue-dark;
+  }
+  
+  /* Feature List Icon Badges */
+  .feature-icon {
+    @apply flex-shrink-0 w-6 h-6 bg-lifesprout-orange rounded flex items-center justify-center;
+  }
+  
+  /* Navigation Active States */
+  .nav-item-active {
+    @apply bg-blue-50 text-lifesprout-blue border-r-4 border-lifesprout-blue;
+  }
+  
+  .nav-item {
+    @apply text-gray-600 hover:bg-gray-50 hover:text-gray-900 transition-colors duration-150;
   }
 }

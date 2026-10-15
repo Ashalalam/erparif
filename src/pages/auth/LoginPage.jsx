@@ -158,7 +158,7 @@ const LoginPage = () => {
 
           {/* Login Form Card */}
           <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-8 space-y-6">
-            <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
+            <form onSubmit={handleSubmit(onSubmit)} autoComplete="off" className="space-y-5">
               {/* Email Field */}
               <div>
                 <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-2">
@@ -170,7 +170,7 @@ const LoginPage = () => {
                 <input
                   {...register('email')}
                   type="email"
-                  autoComplete="email"
+                  autoComplete="off"
                   className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${
                     errors.email ? 'border-red-300' : 'border-gray-300'
                   }`}
@@ -196,7 +196,7 @@ const LoginPage = () => {
                   <input
                     {...register('password')}
                     type={showPassword ? 'text' : 'password'}
-                    autoComplete="current-password"
+                    autoComplete="off"
                     className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${
                       errors.password ? 'border-red-300' : 'border-gray-300'
                     }`}

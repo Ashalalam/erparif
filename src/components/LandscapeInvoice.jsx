@@ -122,56 +122,49 @@ const LandscapeInvoice = ({
   const invoiceDate = new Date(sale.created_at)
 
   return (
-    <>
+    <div className="invoice-container">
       <style>{`
         @page {
           size: A4 portrait;
           margin: 5mm;
         }
 
-        body {
+        * {
+          box-sizing: border-box;
           margin: 0;
           padding: 0;
         }
 
-        .invoice-wrapper {
+        html, body {
+          width: 100%;
+          height: 100%;
+        }
+
+        .invoice-container {
           font-family: Arial, sans-serif;
-          background: white;
           width: 210mm;
-          min-height: 297mm;
           margin: 0 auto;
-          position: relative;
+        }
+
+        .page {
+          width: 210mm;
+          height: 287mm;
           page-break-after: always;
+          page-break-inside: avoid;
+          position: relative;
+          background: white;
         }
 
-        /* Page Indicator */
-        .page-indicator {
-          position: absolute;
-          top: 3mm;
-          left: 3mm;
-          display: flex;
-          align-items: center;
-          font-size: 10pt;
-          color: #333;
+        .page:last-child {
+          page-break-after: auto;
         }
 
-        .page-icon {
-          width: 18px;
-          height: 18px;
-          border: 1px solid #666;
-          margin-right: 6px;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          font-size: 8pt;
-        }
-
-        /* Main Content */
-        .invoice-content {
+        /* Page Content Wrappers */
+        .page-content {
           border: 2px solid #000;
-          margin: 8mm 5mm 5mm 5mm;
+          margin: 5mm;
           padding: 0;
-          min-height: 277mm;
+          height: calc(287mm - 10mm);
         }
 
         /* Header */
@@ -259,18 +252,13 @@ const LandscapeInvoice = ({
           border: 1px solid #000;
           padding: 4px 3px;
           vertical-align: middle;
-          min-height: 20px;
-        }
-
-        .product-table tbody tr {
-          min-height: 22px;
         }
 
         .text-left { text-align: left; }
         .text-center { text-align: center; }
         .text-right { text-align: right; }
 
-        /* Column Widths - Exact match to reference */
+        /* Column Widths */
         .col-sr { width: 20px; }
         .col-product { width: auto; min-width: 100px; }
         .col-mfr { width: 55px; }
@@ -331,8 +319,6 @@ const LandscapeInvoice = ({
 
         .totals-box {
           width: 240px;
-          display: flex;
-          flex-direction: column;
         }
 
         .totals-table {
@@ -382,23 +368,7 @@ const LandscapeInvoice = ({
           margin-bottom: 4px;
         }
 
-        /* Page 2 - Terms */
-        .terms-page {
-          page-break-before: always;
-          font-family: Arial, sans-serif;
-          background: white;
-          width: 210mm;
-          min-height: 297mm;
-          margin: 0 auto;
-        }
-
-        .terms-content {
-          border: 2px solid #000;
-          margin: 8mm 5mm;
-          padding: 15px;
-          min-height: 277mm;
-        }
-
+        /* Page 2 Styles */
         .terms-header {
           text-align: center;
           font-weight: bold;
@@ -411,6 +381,7 @@ const LandscapeInvoice = ({
         .terms-text {
           font-size: 8pt;
           line-height: 1.6;
+          padding: 0 15px;
         }
 
         .terms-text p {
@@ -418,7 +389,7 @@ const LandscapeInvoice = ({
         }
 
         .bank-details-box {
-          margin-top: 20px;
+          margin: 20px 15px;
           padding: 12px;
           border: 1px solid #000;
           background: #f9f9f9;
@@ -436,7 +407,7 @@ const LandscapeInvoice = ({
         }
 
         .signature-area {
-          margin-top: 50px;
+          margin: 50px 15px 15px 15px;
           display: flex;
           justify-content: space-between;
           align-items: flex-end;
@@ -460,32 +431,31 @@ const LandscapeInvoice = ({
         }
 
         @media print {
-          body {
-            margin: 0;
-            padding: 0;
+          * {
+            -webkit-print-color-adjust: exact;
+            print-color-adjust: exact;
           }
 
-          .invoice-wrapper, .terms-page {
-            margin: 0;
+          .invoice-container {
             width: 100%;
           }
 
-          @page {
-            size: A4 portrait;
-            margin: 5mm;
+          .page {
+            page-break-after: always !important;
+            page-break-inside: avoid !important;
+            width: 100%;
+            height: auto;
+          }
+
+          .page:last-child {
+            page-break-after: auto !important;
           }
         }
       `}</style>
 
       {/* Page 1 - Invoice */}
-      <div className="invoice-wrapper">
-        {/* Page Indicator */}
-        <div className="page-indicator">
-          <div className="page-icon">📄</div>
-          <span>1 of 3</span>
-        </div>
-
-        <div className="invoice-content">
+      <div className="page">
+        <div className="page-content">
           {/* Header */}
           <div className="invoice-header">
             <div className="company-name">{companyDetails.pharmacy_name || 'LIFESPROUT CARE LLP'}</div>
@@ -506,12 +476,11 @@ const LandscapeInvoice = ({
           <div className="customer-section">
             <div className="customer-left">
               <div className="customer-name">
-                M/S: {customer?.business_name || customer?.name || 'MAHALAXMI MEDICAL & GENERAL STORE'}
+                M/S: {customer?.business_name || customer?.name || 'Walk-in Customer'}
               </div>
-              <div>WANI ROAD KORPANA</div>
-              <div>CHANDRAPUR</div>
-              <div>PHONE: {customer?.phone || '6860257123'}</div>
-              <div>Party: GST-CGMPD3541D1ZP</div>
+              {customer?.address && <div>{customer.address}</div>}
+              {customer?.phone && <div>PHONE: {customer.phone}</div>}
+              {customer?.gstin && <div>GSTIN: {customer.gstin}</div>}
             </div>
             <div className="customer-right">
               <div><strong>INVOICE NO:</strong> {sale.invoice_number}</div>
@@ -534,7 +503,7 @@ const LandscapeInvoice = ({
                 <th className="col-exp">Exp</th>
                 <th className="col-mrp">M.R.P</th>
                 <th className="col-rate">Rate</th>
-                <th className="col-disc">Free</th>
+                <th className="col-disc">Disc</th>
                 <th className="col-gst-pct">GST<br/>%</th>
                 <th className="col-gst-amt">GST<br/>Amt</th>
                 <th className="col-amount text-right">Amount</th>
@@ -579,9 +548,9 @@ const LandscapeInvoice = ({
                 )
               })}
               
-              {/* Fill empty rows to maintain layout */}
-              {items.length < 10 && Array(10 - items.length).fill(0).map((_, i) => (
-                <tr key={`empty-${i}`} style={{height: '22px'}}>
+              {/* Fill empty rows */}
+              {items.length < 8 && Array(8 - items.length).fill(0).map((_, i) => (
+                <tr key={`empty-${i}`}>
                   <td colSpan="15">&nbsp;</td>
                 </tr>
               ))}
@@ -590,65 +559,42 @@ const LandscapeInvoice = ({
 
           {/* Footer with GST Summary and Totals */}
           <div className="footer-section">
-            {/* GST Summary */}
             <div className="gst-summary">
-              <div className="gst-summary-title">CLASS</div>
+              <div className="gst-summary-title">GST SUMMARY</div>
               <table className="gst-summary-table">
                 <thead>
                   <tr>
-                    <th>CLASS</th>
-                    <th>TOTAL</th>
+                    <th>Rate</th>
+                    <th>Taxable</th>
+                    <th>CGST</th>
                     <th>SGST</th>
-                    <th>DISC</th>
-                    <th>IGST</th>
-                    <th>TOTAL GST</th>
+                    <th>Total GST</th>
                   </tr>
                 </thead>
                 <tbody>
                   {Object.entries(totals.gstBreakdown).map(([rate, values]) => (
                     <tr key={rate}>
-                      <td>GST {rate}%</td>
+                      <td>{rate}%</td>
                       <td className="text-right">{values.taxable.toFixed(2)}</td>
+                      <td className="text-right">{values.cgst.toFixed(2)}</td>
                       <td className="text-right">{values.sgst.toFixed(2)}</td>
-                      <td className="text-right">0.00</td>
-                      <td className="text-right">{values.igst.toFixed(2)}</td>
                       <td className="text-right">{values.totalGst.toFixed(2)}</td>
                     </tr>
                   ))}
-                  <tr style={{fontWeight: 'bold'}}>
-                    <td>TOTAL</td>
-                    <td className="text-right">{totals.taxableValue.toFixed(2)}</td>
-                    <td className="text-right">{totals.totalSgst.toFixed(2)}</td>
-                    <td className="text-right">0.00</td>
-                    <td className="text-right">{totals.totalIgst.toFixed(2)}</td>
-                    <td className="text-right">{totals.totalTax.toFixed(2)}</td>
-                  </tr>
                 </tbody>
               </table>
-              <div style={{fontSize: '7pt', marginTop: '4px'}}>
-                <strong>Rs. (AND THOUSAND):</strong> {totals.netPayable.toFixed(2)}
-              </div>
             </div>
 
-            {/* Totals Box */}
             <div className="totals-box">
               <table className="totals-table">
                 <tbody>
                   <tr>
-                    <td className="totals-label">SUB TOTAL</td>
+                    <td className="totals-label">SUBTOTAL</td>
                     <td className="totals-value">{totals.taxableValue.toFixed(2)}</td>
-                  </tr>
-                  <tr>
-                    <td className="totals-label">GST PAYBLE</td>
-                    <td className="totals-value">{totals.totalTax.toFixed(2)}</td>
                   </tr>
                   <tr>
                     <td className="totals-label">CGST</td>
                     <td className="totals-value">{totals.totalCgst.toFixed(2)}</td>
-                  </tr>
-                  <tr>
-                    <td className="totals-label">CREDIT</td>
-                    <td className="totals-value">0.00</td>
                   </tr>
                   <tr>
                     <td className="totals-label">SGST</td>
@@ -656,65 +602,58 @@ const LandscapeInvoice = ({
                   </tr>
                   <tr className="grand-total-row">
                     <td className="totals-label">GRAND TOTAL</td>
-                    <td className="totals-value">{totals.netPayable.toFixed(2)}</td>
+                    <td className="totals-value">₹{totals.netPayable.toFixed(2)}</td>
                   </tr>
                 </tbody>
               </table>
             </div>
           </div>
 
-          {/* Notes */}
           <div className="notes-section">
-            <div className="notes-title">NOTE:</div>
-            <div>
-              1. GOODS ONCE SOLD WILL NOT BE TAKEN BACK OR EXCHANGED.<br/>
-              2. INTEREST @2 % PER MONTH WILL BE CHARGED FOR ALL OUTSTANDING BILLS.<br/>
-              3. DISPATCHED THE FILLED QUANTITY AS PER COMMERCIAL POLICY OF THE COMPANY ANNOUNCED FROM TIME TO TIME.<br/>
-              4. ALL DISPUTES ARE SUBJECT TO JURISDICTION OF {companyDetails.state || 'TELANGANA'} COURT ONLY.<br/>
-              5. Payment...
-            </div>
+            <div className="notes-title">Amount in Words:</div>
+            <div>{amountToWords(totals.netPayable)}</div>
           </div>
         </div>
       </div>
 
       {/* Page 2 - Terms & Conditions */}
-      <div className="terms-page">
-        <div className="terms-content">
+      <div className="page">
+        <div className="page-content">
           <div className="terms-header">
             Terms & Conditions<br/>
-            For {companyDetails.pharmacy_name || 'LIFESPROUT CARE LLP'}
+            {companyDetails.pharmacy_name || 'LIFESPROUT CARE LLP'}
           </div>
 
           <div className="terms-text">
             <p><strong>General Terms:</strong></p>
             <p>• Goods once sold will not be taken back or exchanged.</p>
-            <p>• Bills not paid due date will attract 24% interest.</p>
+            <p>• Bills not paid by due date will attract 24% interest per annum.</p>
             <p>• Interest @2% per month will be charged for all outstanding bills.</p>
-            <p>• Sales Tax declaration will be given as prescribed.</p>
+            <p>• All disputes are subject to {companyDetails.state || 'TELANGANA'} jurisdiction only.</p>
+            <p>• Payment terms as agreed at the time of sale.</p>
+          </div>
 
-            <div className="bank-details-box">
-              <div className="bank-details-title">
-                Bank Details: {companyDetails.pharmacy_name || 'LIFESPROUT CARE LLP'}
-              </div>
-              <div className="bank-details-content">
-                <div><strong>Bank Name:</strong> {companyDetails.bank_name || 'HDFC BANK'}</div>
-                <div><strong>Branch:</strong> {companyDetails.bank_branch || 'Main Branch'}</div>
-                <div><strong>A/C NO:</strong> {companyDetails.bank_account || '50200012345678'}</div>
-                <div><strong>IFSC CODE:</strong> {companyDetails.bank_ifsc || 'HDFC0000372'}</div>
-                <div><strong>NEFT CODE: {companyDetails.bank_ifsc || 'HDFC0000372'}</strong></div>
-              </div>
+          <div className="bank-details-box">
+            <div className="bank-details-title">
+              Bank Details
+            </div>
+            <div className="bank-details-content">
+              <div><strong>Bank Name:</strong> {companyDetails.bank_name || 'HDFC BANK'}</div>
+              <div><strong>Branch:</strong> {companyDetails.bank_branch || 'Main Branch'}</div>
+              <div><strong>A/C NO:</strong> {companyDetails.bank_account || '50200012345678'}</div>
+              <div><strong>IFSC CODE:</strong> {companyDetails.bank_ifsc || 'HDFC0000372'}</div>
             </div>
           </div>
 
           <div className="signature-area">
             <div className="checked-by">Checked By: ________________</div>
             <div className="authorized-sig">
-              <div className="sig-line">Authorised signatory</div>
+              <div className="sig-line">Authorised Signatory</div>
             </div>
           </div>
         </div>
       </div>
-    </>
+    </div>
   )
 }
 

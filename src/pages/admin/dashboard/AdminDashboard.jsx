@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react'
+import { Link } from 'react-router-dom'
 import { 
   TrendingUp, 
   TrendingDown, 
@@ -17,6 +18,11 @@ import LoadingSpinner from '../../../components/LoadingSpinner'
 
 const AdminDashboard = () => {
   const [loading, setLoading] = useState(true)
+  const [inventoryAlerts, setInventoryAlerts] = useState({
+    lowStock: 0,
+    expired: 0,
+    expiringSoon: 0
+  })
   const [dashboardData, setDashboardData] = useState({
     stats: {
       todaySales: 0,
@@ -45,6 +51,7 @@ const AdminDashboard = () => {
 
   useEffect(() => {
     fetchDashboardData()
+    fetchInventoryAlerts()
   }, [])
 
   const fetchDashboardData = async () => {
@@ -170,6 +177,26 @@ const AdminDashboard = () => {
     }
   }
 
+  const fetchInventoryAlerts = async () => {
+    try {
+      // Get low stock count
+      const { data: lowStockData } = await supabase
+        .rpc('get_low_stock_medicines')
+
+      // Get expiring batches
+      const { data: expiringData } = await supabase
+        .rpc('get_expiring_batches', { p_days_ahead: 90 })
+
+      setInventoryAlerts({
+        lowStock: lowStockData?.length || 0,
+        expired: expiringData?.filter(b => b.expiry_status === 'expired').length || 0,
+        expiringSoon: expiringData?.filter(b => b.expiry_status === 'critical').length || 0
+      })
+    } catch (error) {
+      console.error('Error fetching inventory alerts:', error)
+    }
+  }
+
   // Sample data generators (replace with real data in production)
   const generateSampleSalesData = () => {
     const data = []
@@ -230,27 +257,34 @@ const AdminDashboard = () => {
     return <LoadingSpinner text="Loading dashboard..." />
   }
 
-  const StatCard = ({ title, value, icon: Icon, change, changeType = 'positive' }) => (
-    <div className="card">
-      <div className="flex items-center justify-between">
-        <div>
-          <p className="text-sm font-medium text-gray-600">{title}</p>
-          <p className="text-2xl font-bold text-gray-900">
-            {typeof value === 'number' && title.includes('₹') ? `₹${value.toLocaleString()}` : value.toLocaleString()}
-          </p>
-          {change && (
-            <p className={`text-sm flex items-center mt-1 ${changeType === 'positive' ? 'text-green-600' : 'text-red-600'}`}>
-              {changeType === 'positive' ? <TrendingUp className="h-4 w-4 mr-1" /> : <TrendingDown className="h-4 w-4 mr-1" />}
-              {change}
+  const StatCard = ({ title, value, icon: Icon, change, changeType = 'positive', bgColor = '', textColor = '', link = '' }) => {
+    const content = (
+      <div className="card">
+        <div className="flex items-center justify-between">
+          <div>
+            <p className="text-sm font-medium text-gray-600">{title}</p>
+            <p className={`text-2xl font-bold ${textColor || 'text-gray-900'}`}>
+              {typeof value === 'number' && title.includes('₹') ? `₹${value.toLocaleString()}` : value.toLocaleString()}
             </p>
-          )}
-        </div>
-        <div className={`p-3 rounded-full ${changeType === 'positive' ? 'bg-green-100' : 'bg-red-100'}`}>
-          <Icon className={`h-6 w-6 ${changeType === 'positive' ? 'text-green-600' : 'text-red-600'}`} />
+            {change && (
+              <p className={`text-sm flex items-center mt-1 ${changeType === 'positive' ? 'text-green-600' : 'text-red-600'}`}>
+                {changeType === 'positive' ? <TrendingUp className="h-4 w-4 mr-1" /> : <TrendingDown className="h-4 w-4 mr-1" />}
+                {change}
+              </p>
+            )}
+          </div>
+          <div className={`p-3 rounded-full ${bgColor || (changeType === 'positive' ? 'bg-green-100' : 'bg-red-100')}`}>
+            <Icon className={`h-6 w-6 ${textColor || (changeType === 'positive' ? 'text-green-600' : 'text-red-600')}`} />
+          </div>
         </div>
       </div>
-    </div>
-  )
+    )
+
+    if (link) {
+      return <Link to={link}>{content}</Link>
+    }
+    return content
+  }
 
   return (
     <div className="space-y-6">
@@ -301,6 +335,49 @@ const AdminDashboard = () => {
           change="+5"
           changeType="positive"
         />
+      </div>
+
+      {/* Inventory Alerts */}
+      <div>
+        <h2 className="text-lg font-semibold text-gray-900 mb-4">Inventory Alerts</h2>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          <StatCard
+            title="Low Stock Items"
+            value={inventoryAlerts.lowStock}
+            icon={TrendingDown}
+            changeType="negative"
+            bgColor="bg-red-50"
+            textColor="text-red-600"
+            link="/admin/inventory-alerts"
+          />
+          <StatCard
+            title="Expired Batches"
+            value={inventoryAlerts.expired}
+            icon={AlertTriangle}
+            changeType="negative"
+            bgColor="bg-red-50"
+            textColor="text-red-600"
+            link="/admin/inventory-alerts"
+          />
+          <StatCard
+            title="Expiring Soon (≤30d)"
+            value={inventoryAlerts.expiringSoon}
+            icon={Clock}
+            changeType="negative"
+            bgColor="bg-orange-50"
+            textColor="text-orange-600"
+            link="/admin/inventory-alerts"
+          />
+          <StatCard
+            title="Total Stock Items"
+            value={dashboardData.stats.totalStock}
+            icon={Package}
+            changeType="positive"
+            bgColor="bg-blue-50"
+            textColor="text-blue-600"
+            link="/admin/inventory"
+          />
+        </div>
       </div>
 
       {/* Second Stats Row */}

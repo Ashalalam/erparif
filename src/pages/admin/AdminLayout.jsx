@@ -58,9 +58,12 @@ const AdminLayout = ({ children }) => {
     { name: 'POS', href: '/admin/pos', icon: ShoppingCart },
     { name: 'Medicines', href: '/admin/medicines', icon: Pill },
     { name: 'Inventory', href: '/admin/inventory', icon: Package },
+    { name: 'Inventory Alerts', href: '/admin/inventory-alerts', icon: AlertTriangle },
+    { name: 'Stock Movements', href: '/admin/stock-movements', icon: Package },
     { name: 'Purchases', href: '/admin/purchases', icon: ShoppingBag },
     { name: 'Sales', href: '/admin/sales', icon: Receipt },
     { name: 'Customers', href: '/admin/customers', icon: Users },
+    { name: 'Customer Orders', href: '/admin/customer-orders', icon: Package },
     { name: 'Customer Ledger', href: '/admin/ledger', icon: DollarSign },
     { name: 'Supplier Ledger', href: '/admin/supplier-ledger', icon: Truck },
     { name: 'Prescriptions', href: '/admin/prescriptions', icon: FileText },
@@ -92,15 +95,22 @@ const AdminLayout = ({ children }) => {
       {/* Sidebar */}
       <div className={`fixed inset-y-0 left-0 z-50 w-64 bg-white shadow-xl transform ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'} transition-transform duration-300 ease-in-out lg:translate-x-0 lg:static lg:inset-0`}>
         <div className="flex items-center justify-between h-16 px-6 bg-primary-600">
-          <div className="flex items-center">
-            <div className="h-8 w-8 bg-white rounded-lg flex items-center justify-center overflow-hidden">
-              {logo ? (
-                <img src={logo} alt="Logo" className="h-full w-full object-contain" />
-              ) : (
-                <span className="text-lg font-bold text-primary-600">Rx</span>
-              )}
+          <div className="flex items-center space-x-2">
+            {/* Fixed LifeSprout Care Logo */}
+            <div className="h-10 w-10 bg-white rounded-lg flex items-center justify-center overflow-hidden p-1">
+              <img 
+                src="/assets/lifesprout-logo.png" 
+                alt="LifeSprout Care" 
+                className="h-full w-full object-contain"
+              />
             </div>
-            <span className="ml-3 text-lg font-semibold text-white truncate">{pharmacyName}</span>
+            {/* Editable Business Logo (from settings) */}
+            {logo && (
+              <div className="h-8 w-8 bg-white rounded-lg flex items-center justify-center overflow-hidden p-0.5">
+                <img src={logo} alt="Business Logo" className="h-full w-full object-contain" />
+              </div>
+            )}
+            <span className="ml-2 text-lg font-semibold text-white truncate">{pharmacyName}</span>
           </div>
           <button
             onClick={() => setSidebarOpen(false)}

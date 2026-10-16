@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react'
+import { Link } from 'react-router-dom'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
@@ -71,13 +72,20 @@ const LoginPage = () => {
         <div>
           {/* Logo and Brand */}
           <div className="flex items-center space-x-3 mb-12">
-            <div className="h-14 w-14 bg-white rounded-lg flex items-center justify-center overflow-hidden">
-              {logo ? (
-                <img src={logo} alt="Logo" className="h-full w-full object-contain p-1" />
-              ) : (
-                <span className="text-2xl font-bold text-blue-900">Rx</span>
-              )}
+            {/* Fixed LifeSprout Care Logo */}
+            <div className="h-14 w-14 bg-white rounded-lg flex items-center justify-center overflow-hidden p-1">
+              <img 
+                src="/assets/lifesprout-logo.png" 
+                alt="LifeSprout Care" 
+                className="h-full w-full object-contain"
+              />
             </div>
+            {/* Editable Business Logo (if set in settings) */}
+            {logo && (
+              <div className="h-12 w-12 bg-white rounded-lg flex items-center justify-center overflow-hidden p-1">
+                <img src={logo} alt="Business Logo" className="h-full w-full object-contain" />
+              </div>
+            )}
             <div>
               <h1 className="text-2xl font-bold">{pharmacyName}</h1>
               <p className="text-sm text-blue-200">Smart ERP & Fast POS Billing System</p>
@@ -235,6 +243,14 @@ const LoginPage = () => {
                 )}
               </button>
             </form>
+
+            {/* Register Link */}
+            <div className="mt-6 text-center text-sm text-gray-600">
+              Don't have an account?{' '}
+              <Link to="/register" className="text-blue-900 hover:underline font-semibold">
+                Create Account
+              </Link>
+            </div>
 
             {/* Demo Accounts - For Testing */}
             <div className="mt-6 pt-6 border-t border-gray-200">

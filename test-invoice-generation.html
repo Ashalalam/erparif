@@ -1,0 +1,362 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Test Invoice Generation - BillSprout</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+    .container {
+      background: white;
+      border-radius: 16px;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+      max-width: 800px;
+      width: 100%;
+      padding: 40px;
+    }
+    h1 { 
+      font-size: 28px; 
+      color: #1a202c; 
+      margin-bottom: 8px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .icon {
+      width: 40px;
+      height: 40px;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: white;
+      font-size: 20px;
+    }
+    p { color: #64748b; margin-bottom: 32px; font-size: 14px; }
+    .form-group { margin-bottom: 24px; }
+    label {
+      display: block;
+      font-weight: 600;
+      color: #374151;
+      margin-bottom: 8px;
+      font-size: 14px;
+    }
+    input, select {
+      width: 100%;
+      padding: 12px 16px;
+      border: 2px solid #e5e7eb;
+      border-radius: 8px;
+      font-size: 14px;
+      transition: all 0.2s;
+    }
+    input:focus, select:focus {
+      outline: none;
+      border-color: #667eea;
+      box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+    }
+    .input-hint {
+      font-size: 12px;
+      color: #9ca3af;
+      margin-top: 4px;
+    }
+    .button-group {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+      margin-top: 32px;
+    }
+    button {
+      padding: 14px 24px;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      border: none;
+      border-radius: 8px;
+      font-weight: 600;
+      font-size: 16px;
+      cursor: pointer;
+      transition: transform 0.2s, box-shadow 0.2s;
+      display: flex;
+      align-items: center;
+      justify-center;
+      gap: 8px;
+    }
+    button:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 16px rgba(102, 126, 234, 0.3);
+    }
+    button:active { transform: translateY(0); }
+    button:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+      transform: none;
+    }
+    .secondary {
+      background: #6b7280;
+    }
+    .result {
+      margin-top: 24px;
+      padding: 16px;
+      border-radius: 8px;
+      font-size: 14px;
+      display: none;
+    }
+    .result.success {
+      background: #d1fae5;
+      color: #065f46;
+      border: 1px solid #6ee7b7;
+    }
+    .result.error {
+      background: #fee2e2;
+      color: #991b1b;
+      border: 1px solid #fca5a5;
+    }
+    .result.info {
+      background: #dbeafe;
+      color: #1e40af;
+      border: 1px solid #93c5fd;
+    }
+    .result.show { display: block; }
+    .preview {
+      margin-top: 24px;
+      padding: 20px;
+      background: #f9fafb;
+      border-radius: 8px;
+      border: 2px dashed #d1d5db;
+    }
+    .preview-title {
+      font-weight: 600;
+      color: #374151;
+      margin-bottom: 12px;
+    }
+    .preview-content {
+      font-size: 13px;
+      color: #6b7280;
+      line-height: 1.6;
+    }
+    .preview-item {
+      display: flex;
+      justify-content: space-between;
+      padding: 8px 0;
+      border-bottom: 1px solid #e5e7eb;
+    }
+    .preview-item:last-child { border-bottom: none; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>
+      <div class="icon">📄</div>
+      Test Invoice Generation
+    </h1>
+    <p>Generate a sample PDF invoice to test the invoice generation system</p>
+
+    <form id="invoiceForm">
+      <div class="form-group">
+        <label for="orderId">Order ID</label>
+        <input 
+          type="text" 
+          id="orderId" 
+          placeholder="Enter a valid order ID from your database" 
+          required 
+        />
+        <div class="input-hint">
+          Find an order ID from your Supabase customer_orders table
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label for="orderNumber">Order Number (Optional)</label>
+        <input 
+          type="text" 
+          id="orderNumber" 
+          placeholder="e.g., ORD-2024-00001" 
+        />
+        <div class="input-hint">
+          Used for the filename. Leave empty to use Order ID
+        </div>
+      </div>
+
+      <div class="button-group">
+        <button type="submit" id="generateBtn">
+          <span>📥</span>
+          Generate & Download
+        </button>
+        <button type="button" id="previewBtn" class="secondary">
+          <span>👁️</span>
+          Preview Details
+        </button>
+      </div>
+    </form>
+
+    <div id="result" class="result"></div>
+
+    <div id="preview" class="preview" style="display: none;">
+      <div class="preview-title">Order Preview</div>
+      <div id="previewContent" class="preview-content">
+        Loading...
+      </div>
+    </div>
+  </div>
+
+  <script type="module">
+    import { downloadInvoice, generateInvoicePDF } from './src/services/invoiceService.js'
+    import { supabase } from './src/lib/supabase.js'
+
+    const form = document.getElementById('invoiceForm')
+    const generateBtn = document.getElementById('generateBtn')
+    const previewBtn = document.getElementById('previewBtn')
+    const resultDiv = document.getElementById('result')
+    const previewDiv = document.getElementById('preview')
+    const previewContent = document.getElementById('previewContent')
+
+    const showResult = (type, message) => {
+      resultDiv.className = `result ${type} show`
+      resultDiv.textContent = message
+    }
+
+    const fetchOrderDetails = async (orderId) => {
+      const { data: order, error: orderError } = await supabase
+        .from('customer_orders')
+        .select(`
+          *,
+          customer:profiles!customer_id (
+            full_name,
+            email,
+            phone
+          )
+        `)
+        .eq('id', orderId)
+        .single()
+      
+      if (orderError) throw orderError
+      
+      const { data: items, error: itemsError } = await supabase
+        .from('customer_order_items')
+        .select(`
+          *,
+          medicine:medicines (
+            name,
+            generic_name
+          )
+        `)
+        .eq('order_id', orderId)
+      
+      if (itemsError) throw itemsError
+      
+      return { order, items }
+    }
+
+    // Preview order details
+    previewBtn.addEventListener('click', async () => {
+      const orderId = document.getElementById('orderId').value.trim()
+      
+      if (!orderId) {
+        showResult('error', '❌ Please enter an Order ID')
+        return
+      }
+
+      try {
+        showResult('info', '🔍 Fetching order details...')
+        previewDiv.style.display = 'block'
+        previewContent.innerHTML = 'Loading...'
+
+        const { order, items } = await fetchOrderDetails(orderId)
+
+        previewContent.innerHTML = `
+          <div class="preview-item">
+            <strong>Order Number:</strong>
+            <span>${order.order_number}</span>
+          </div>
+          <div class="preview-item">
+            <strong>Customer:</strong>
+            <span>${order.customer?.full_name || 'Unknown'}</span>
+          </div>
+          <div class="preview-item">
+            <strong>Status:</strong>
+            <span>${order.status.toUpperCase()}</span>
+          </div>
+          <div class="preview-item">
+            <strong>Items:</strong>
+            <span>${items.length} items</span>
+          </div>
+          <div class="preview-item">
+            <strong>Total:</strong>
+            <span>₹${parseFloat(order.total).toFixed(2)}</span>
+          </div>
+          <div class="preview-item">
+            <strong>Date:</strong>
+            <span>${new Date(order.created_at).toLocaleDateString('en-IN')}</span>
+          </div>
+          <div style="margin-top: 12px; padding-top: 12px; border-top: 2px solid #e5e7eb;">
+            <strong>Items:</strong>
+            <ul style="margin-top: 8px; padding-left: 20px;">
+              ${items.map(item => `
+                <li style="margin-bottom: 4px;">
+                  ${item.medicine?.name || 'Unknown'} - 
+                  Qty: ${item.quantity} × ₹${parseFloat(item.unit_price).toFixed(2)}
+                </li>
+              `).join('')}
+            </ul>
+          </div>
+        `
+
+        showResult('success', '✅ Order details loaded successfully!')
+      } catch (error) {
+        console.error('Preview error:', error)
+        showResult('error', `❌ Failed to load order: ${error.message}`)
+        previewDiv.style.display = 'none'
+      }
+    })
+
+    // Generate invoice
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault()
+      
+      const orderId = document.getElementById('orderId').value.trim()
+      const orderNumber = document.getElementById('orderNumber').value.trim()
+
+      if (!orderId) {
+        showResult('error', '❌ Please enter an Order ID')
+        return
+      }
+
+      try {
+        generateBtn.disabled = true
+        generateBtn.innerHTML = '<span>⏳</span> Generating...'
+        showResult('info', '📄 Generating invoice PDF...')
+
+        // Download invoice
+        const result = await downloadInvoice(orderId, orderNumber)
+
+        if (result.success) {
+          showResult('success', '✅ Invoice downloaded successfully! Check your downloads folder.')
+          
+          // Reset form
+          setTimeout(() => {
+            form.reset()
+            previewDiv.style.display = 'none'
+          }, 2000)
+        } else {
+          showResult('error', `❌ Failed to generate invoice: ${result.error}`)
+        }
+      } catch (error) {
+        console.error('Generation error:', error)
+        showResult('error', `❌ Error: ${error.message}`)
+      } finally {
+        generateBtn.disabled = false
+        generateBtn.innerHTML = '<span>📥</span> Generate & Download'
+      }
+    })
+  </script>
+</body>
+</html>

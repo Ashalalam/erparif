@@ -4,7 +4,7 @@ import useAuthStore from '../store/authStore'
 import LoadingSpinner from './LoadingSpinner'
 
 const ProtectedRoute = ({ children, requiredRole = null }) => {
-  const { user, profile, loading, hasPermission } = useAuthStore()
+  const { user, profile, loading, hasPermission, needsProfileRecovery } = useAuthStore()
 
   if (loading) {
     return <LoadingSpinner />
@@ -14,8 +14,9 @@ const ProtectedRoute = ({ children, requiredRole = null }) => {
     return <Navigate to="/login" replace />
   }
 
-  if (!profile) {
-    return <LoadingSpinner text="Loading profile..." />
+  // If profile recovery is needed, redirect to recovery page
+  if (needsProfileRecovery || !profile) {
+    return <Navigate to="/profile-recovery" replace />
   }
 
   if (requiredRole && !hasPermission(requiredRole)) {

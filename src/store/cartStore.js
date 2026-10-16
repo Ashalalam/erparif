@@ -1,4 +1,5 @@
 import { create } from 'zustand'
+import { supabase } from '../lib/supabase'
 
 const useCartStore = create((set, get) => ({
   items: [],
@@ -6,9 +7,182 @@ const useCartStore = create((set, get) => ({
   saleType: null, // null initially, 'retail' or 'wholesale' when selected
   paymentMethod: 'cash',
   discount: 0,
+  loading: false,
+  initialized: false,
   
+  // Load cart from database for authenticated customer
+  loadCart: async (customerId) => {
+    if (!customerId) {
+      console.log('⚠️ No customer ID provided, skipping cart load')
+      set({ items: [], initialized: true })
+      return
+    }
+
+    set({ loading: true })
+    
+    try {
+      console.log('📦 Loading cart for customer:', customerId)
+      
+      // Fetch cart items with medicine and batch details
+      const { data: cartItems, error } = await supabase
+        .from('customer_cart_items')
+        .select(`
+          id,
+          medicine_id,
+          batch_id,
+          quantity,
+          free_quantity,
+          medicines!inner (
+            id,
+            name,
+            generic_name,
+            manufacturer,
+            mrp,
+            gst_percentage,
+            prescription_required,
+            schedule
+          ),
+          medicine_batches!inner (
+            id,
+            batch_number,
+            expiry_date,
+            selling_price,
+            wholesale_price,
+            mrp,
+            current_quantity
+          )
+        `)
+        .eq('customer_id', customerId)
+
+      if (error) {
+        console.error('❌ Error loading cart:', error)
+        set({ items: [], loading: false, initialized: true })
+        return
+      }
+
+      if (!cartItems || cartItems.length === 0) {
+        console.log('📭 Cart is empty')
+        set({ items: [], loading: false, initialized: true })
+        return
+      }
+
+      // Transform to cart format, filtering out invalid items
+      const validItems = cartItems
+        .filter(item => {
+          // Check if medicine and batch exist
+          if (!item.medicines || !item.medicine_batches) {
+            console.warn('⚠️ Skipping cart item with missing medicine/batch data')
+            return false
+          }
+          
+          // Check if batch is expired
+          if (new Date(item.medicine_batches.expiry_date) <= new Date()) {
+            console.warn('⚠️ Skipping expired batch:', item.medicine_batches.batch_number)
+            return false
+          }
+          
+          // Check if batch has stock
+          if (item.medicine_batches.current_quantity <= 0) {
+            console.warn('⚠️ Skipping out-of-stock batch:', item.medicine_batches.batch_number)
+            return false
+          }
+          
+          return true
+        })
+        .map(item => ({
+          id: `${item.medicine_id}-${item.batch_id}`,
+          medicine: item.medicines,
+          batch: item.medicine_batches,
+          quantity: item.quantity,
+          freeQuantity: item.free_quantity || 0,
+          price: item.medicine_batches.selling_price,
+          discount: 0
+        }))
+
+      console.log(`✅ Loaded ${validItems.length} valid cart items`)
+      set({ items: validItems, loading: false, initialized: true })
+      
+    } catch (error) {
+      console.error('❌ Error loading cart:', error)
+      set({ items: [], loading: false, initialized: true })
+    }
+  },
+
+  // Save cart item to database
+  saveCartItem: async (customerId, medicine, batch, quantity, freeQuantity = 0) => {
+    if (!customerId) {
+      console.warn('⚠️ No customer ID, cannot persist cart item')
+      return
+    }
+
+    try {
+      // Upsert cart item
+      const { error } = await supabase
+        .from('customer_cart_items')
+        .upsert({
+          customer_id: customerId,
+          medicine_id: medicine.id,
+          batch_id: batch.id,
+          quantity,
+          free_quantity: freeQuantity
+        }, {
+          onConflict: 'customer_id,medicine_id,batch_id'
+        })
+
+      if (error) {
+        console.error('❌ Error saving cart item:', error)
+      } else {
+        console.log('✅ Cart item saved to database')
+      }
+    } catch (error) {
+      console.error('❌ Error saving cart item:', error)
+    }
+  },
+
+  // Remove cart item from database
+  removeCartItem: async (customerId, medicineId, batchId) => {
+    if (!customerId) return
+
+    try {
+      const { error } = await supabase
+        .from('customer_cart_items')
+        .delete()
+        .eq('customer_id', customerId)
+        .eq('medicine_id', medicineId)
+        .eq('batch_id', batchId)
+
+      if (error) {
+        console.error('❌ Error removing cart item:', error)
+      } else {
+        console.log('✅ Cart item removed from database')
+      }
+    } catch (error) {
+      console.error('❌ Error removing cart item:', error)
+    }
+  },
+
+  // Clear all cart items from database
+  clearCartInDatabase: async (customerId) => {
+    if (!customerId) return
+
+    try {
+      const { error } = await supabase
+        .from('customer_cart_items')
+        .delete()
+        .eq('customer_id', customerId)
+
+      if (error) {
+        console.error('❌ Error clearing cart from database:', error)
+      } else {
+        console.log('✅ Cart cleared from database')
+      }
+    } catch (error) {
+      console.error('❌ Error clearing cart from database:', error)
+    }
+  },
+
   // Add item to cart
-  addItem: (medicine, batch, quantity, freeQuantity = 0) => {
+  addItem: async (medicine, batch, quantity, freeQuantity = 0, customerId = null) => {
     const items = get().items
     const existingItemIndex = items.findIndex(
       item => item.medicine.id === medicine.id && item.batch.id === batch.id
@@ -23,6 +197,17 @@ const useCartStore = create((set, get) => ({
         freeQuantity: updatedItems[existingItemIndex].freeQuantity + freeQuantity
       }
       set({ items: updatedItems })
+      
+      // Save to database
+      if (customerId) {
+        await get().saveCartItem(
+          customerId,
+          medicine,
+          batch,
+          updatedItems[existingItemIndex].quantity,
+          updatedItems[existingItemIndex].freeQuantity
+        )
+      }
     } else {
       // Add new item
       const saleType = get().saleType
@@ -36,16 +221,34 @@ const useCartStore = create((set, get) => ({
         discount: 0
       }
       set({ items: [...items, newItem] })
+      
+      // Save to database
+      if (customerId) {
+        await get().saveCartItem(customerId, medicine, batch, quantity, freeQuantity)
+      }
     }
   },
 
   // Update item quantity
-  updateItemQuantity: (itemId, quantity, freeQuantity = 0) => {
+  updateItemQuantity: async (itemId, quantity, freeQuantity = 0, customerId = null) => {
     const items = get().items
+    const item = items.find(item => item.id === itemId)
+    
     const updatedItems = items.map(item => 
       item.id === itemId ? { ...item, quantity, freeQuantity } : item
     )
     set({ items: updatedItems })
+    
+    // Save to database
+    if (customerId && item) {
+      await get().saveCartItem(
+        customerId,
+        item.medicine,
+        item.batch,
+        quantity,
+        freeQuantity
+      )
+    }
   },
 
   // Update item discount
@@ -58,9 +261,17 @@ const useCartStore = create((set, get) => ({
   },
 
   // Remove item from cart
-  removeItem: (itemId) => {
-    const items = get().items.filter(item => item.id !== itemId)
-    set({ items })
+  removeItem: async (itemId, customerId = null) => {
+    const items = get().items
+    const item = items.find(item => item.id === itemId)
+    
+    const updatedItems = items.filter(item => item.id !== itemId)
+    set({ items: updatedItems })
+    
+    // Remove from database
+    if (customerId && item) {
+      await get().removeCartItem(customerId, item.medicine.id, item.batch.id)
+    }
   },
 
   // Set customer
@@ -132,12 +343,20 @@ const useCartStore = create((set, get) => ({
   },
 
   // Clear cart
-  clearCart: () => set({ 
-    items: [], 
-    customer: null,
-    saleType: null, // Reset to no selection
-    discount: 0 
-  }),
+  clearCart: async (customerId = null) => {
+    // Clear from database first
+    if (customerId) {
+      await get().clearCartInDatabase(customerId)
+    }
+    
+    // Clear local state
+    set({ 
+      items: [], 
+      customer: null,
+      saleType: null, // Reset to no selection
+      discount: 0 
+    })
+  },
 
   // Validate cart
   validateCart: () => {
